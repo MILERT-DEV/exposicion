@@ -2,8 +2,6 @@ name: Instalador Windows
 
 on:
   workflow_dispatch:
-  push:
-    tags: ['v*']
 
 jobs:
   build:
@@ -17,18 +15,41 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Instalar WiX Toolset 3 (requerido por jpackage)
+      - name: Instalar WiX Toolset 3
         shell: pwsh
         run: |
           choco install wixtoolset -y --no-progress
-          echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "C:\Program Files (x86)\WiX Toolset v3.14\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Generar instalador
-        shell: cmd
-        run: call crear-instalador.bat
+        shell: pwsh
+        run: |
+          $pom = Get-ChildItem -Recurse -Filter pom.xml | Select-Object -First 1
+          if (-not $pom) { Write-Error "No se encontro pom.xml en el repositorio"; exit 1 }
+          Set-Location $pom.DirectoryName
+          mvn -B clean package -DskipTests
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $jar = Get-ChildItem target -Filter "*-jar-with-dependencies.jar" | Select-Object -First 1
+          if (-not $jar) { Write-Error "No se genero el JAR con dependencias"; exit 1 }
+          New-Item -ItemType Directory -Force jpackage-input | Out-Null
+          Copy-Item $jar.FullName jpackage-input\
+          $a = @('--type','exe','--name','SysTurismo','--app-version','1.0.0',
+            '--vendor','Universidad Peruana Union',
+            '--description','SysTurismo - Sistema de Agencia de Turismo',
+            '--input','jpackage-input','--main-jar',$jar.Name,
+            '--main-class','pe.edu.upeu.systurismo.Launcher',
+            '--add-modules','java.base,java.sql,java.naming,java.management,java.logging,java.desktop,jdk.unsupported,jdk.xml.dom',
+            '--java-options','-Dfile.encoding=UTF-8',
+            '--win-menu','--win-menu-group','SysTurismo','--win-shortcut','--win-dir-chooser',
+            '--win-upgrade-uuid','6f1c2a54-8d3b-4e7a-9c15-3b2a7d9e41aa',
+            '--dest','installer')
+          jpackage @a
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\salida" | Out-Null
+          Copy-Item installer\*.exe "$env:GITHUB_WORKSPACE\salida\"
 
       - uses: actions/upload-artifact@v4
         with:
           name: SysTurismo-instalador-windows
-          path: installer/SysTurismo-1.0.0.exe
+          path: salida/*.exe
           if-no-files-found: error
