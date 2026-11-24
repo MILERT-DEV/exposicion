@@ -1,0 +1,9 @@
+target/
+data/
+.idea/
+*.iml
+comprobantes/
+
+installer/
+jpackage-input/
+dist/

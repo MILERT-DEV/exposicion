@@ -1,0 +1,15 @@
+.root {
+    -fx-font-family: "Arial";
+    -fx-background-color: #f5f7fa;
+}
+.button {
+    -fx-background-color: #1c5d8f;
+    -fx-text-fill: white;
+    -fx-background-radius: 4;
+    -fx-padding: 7 14;
+}
+.button:hover { -fx-background-color: #287bb7; }
+.table-view { -fx-background-radius: 4; }
+.table-view .column-header-background { -fx-background-color: #e7eef5; }
+.tab-pane .tab-header-area .tab-header-background { -fx-background-color: #e7eef5; }
+.label { -fx-text-fill: #263746; }
